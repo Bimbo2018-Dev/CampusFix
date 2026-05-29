@@ -39,11 +39,17 @@ class _AddReportScreenState extends State<AddReportScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) {
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     final state = AppStateScope.read(context);
+    setState(() => _isSubmitting = true);
+
     final duplicates = state.findPotentialDuplicates(
       title: _titleController.text,
       category: _category!,
@@ -51,12 +57,15 @@ class _AddReportScreenState extends State<AddReportScreen> {
     );
     if (duplicates.isNotEmpty) {
       final shouldContinue = await _showDuplicateWarning(duplicates);
+      if (!mounted) {
+        return;
+      }
       if (shouldContinue != true) {
+        setState(() => _isSubmitting = false);
         return;
       }
     }
 
-    setState(() => _isSubmitting = true);
     try {
       await state.addReport(
         title: _titleController.text,

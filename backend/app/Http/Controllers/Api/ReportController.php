@@ -52,12 +52,27 @@ class ReportController extends Controller
     {
         $validated = $request->validate($this->reportRules());
         $user = $request->user();
+        $validated['title'] = trim($validated['title']);
+        $validated['description'] = trim($validated['description']);
+        $validated['location'] = trim($validated['location']);
+
+        $categoryId = $this->categoryId($validated['category']);
+        $priorityId = $this->priorityId($validated['priority']);
+
+        $duplicate = $this->findActiveDuplicate($user->id, $categoryId, $validated);
+        if ($duplicate) {
+            return response()->json([
+                'duplicate' => true,
+                'message' => 'A matching active report already exists.',
+                'report' => $this->reportPayload($duplicate),
+            ]);
+        }
 
         $report = Report::create([
             'external_id' => $this->nextExternalId(),
             'user_id' => $user->id,
-            'category_id' => $this->categoryId($validated['category']),
-            'priority_id' => $this->priorityId($validated['priority']),
+            'category_id' => $categoryId,
+            'priority_id' => $priorityId,
             'status_id' => $this->statusId('Pending'),
             'title' => $validated['title'],
             'description' => $validated['description'],
@@ -259,5 +274,21 @@ class ReportController extends Controller
     private function statusId(string $name): int
     {
         return ReportStatus::where('name', $name)->value('id');
+    }
+
+    private function findActiveDuplicate(int $userId, int $categoryId, array $validated): ?Report
+    {
+        return Report::query()
+            ->with(['reporter', 'category', 'priority', 'status', 'notes.author'])
+            ->where('user_id', $userId)
+            ->where('category_id', $categoryId)
+            ->where('title', $validated['title'])
+            ->where('location', $validated['location'])
+            ->whereDoesntHave(
+                'status',
+                fn ($query) => $query->whereIn('name', ['Resolved', 'Rejected'])
+            )
+            ->latest('updated_at')
+            ->first();
     }
 }

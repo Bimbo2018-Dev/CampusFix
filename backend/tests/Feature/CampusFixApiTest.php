@@ -56,6 +56,38 @@ class CampusFixApiTest extends TestCase
             ->assertJsonPath('report.status', 'Pending');
     }
 
+    public function test_duplicate_active_report_returns_existing_report(): void
+    {
+        $this->seed();
+
+        $login = $this->postJson('/api/auth/login', [
+            'email' => 'student@campusfix.app',
+            'password' => 'student123',
+            'role' => 'Student',
+        ]);
+
+        $payload = [
+            'title' => 'Duplicate projector issue',
+            'description' => 'The projector still shows no display.',
+            'category' => 'Classroom',
+            'location' => 'Room 204',
+            'priority' => 'Urgent',
+        ];
+
+        $first = $this->withToken($login->json('token'))
+            ->postJson('/api/reports', $payload)
+            ->assertCreated()
+            ->json('report.id');
+
+        $this->withToken($login->json('token'))
+            ->postJson('/api/reports', $payload)
+            ->assertOk()
+            ->assertJsonPath('duplicate', true)
+            ->assertJsonPath('report.id', $first);
+
+        $this->assertDatabaseCount('reports', 9);
+    }
+
     public function test_teacher_can_validate_student_report(): void
     {
         $this->seed();
