@@ -30,7 +30,15 @@ try {
     }
   }
 
-  $buildArgs = @("build", "apk", "--release")
+  $buildNumber = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+  $buildName = "1.0.0"
+  $buildArgs = @(
+    "build",
+    "apk",
+    "--release",
+    "--build-name=$buildName",
+    "--build-number=$buildNumber"
+  )
   $androidSignature = "android-" + ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
   $buildArgs += "--dart-define=CAMPUSFIX_ANDROID_BUILD_SIGNATURE=$androidSignature"
   if (-not [string]::IsNullOrWhiteSpace($ApiBase)) {
@@ -47,7 +55,9 @@ try {
     app = "CampusFix"
     platform = "android"
     signature = $androidSignature
-    version = "1.0.0+1"
+    version = "$buildName+$buildNumber"
+    buildName = $buildName
+    buildNumber = $buildNumber
     apiBase = $ApiBase
     file = "CampusFix.apk"
     downloadPath = "/downloads/CampusFix.apk"
