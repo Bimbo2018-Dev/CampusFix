@@ -27,6 +27,7 @@ This setup does not permanently deploy the Laravel backend to a hosting provider
 - Runs Laravel on this laptop.
 - Uses the Aiven cloud MySQL database.
 - Uses Cloudinary for report photos.
+- Builds a downloadable Android APK with the current public API tunnel URL.
 - Builds the Flutter PWA with the public tunnel API URL.
 - Opens two temporary Cloudflare `trycloudflare.com` HTTPS links, one for the API and one for the PWA.
 
@@ -51,6 +52,14 @@ Laravel API:  https://<temporary-name>.trycloudflare.com/api
 ```
 
 Open the frontend PWA link on your laptop and phone. Registration, login, report submission, admin reports, and photo upload will use the same Aiven database through the Laravel API tunnel.
+
+The Android download button uses:
+
+```text
+https://<frontend-pwa-tunnel>/downloads/CampusFix.apk
+```
+
+That APK is rebuilt by the script so the installed Android app uses the same public Laravel API tunnel during the demo.
 
 For a real always-online deployment, use Cloudflare Pages plus a permanent Laravel host. For a school presentation, this tunnel setup is the fastest no-card route.
 

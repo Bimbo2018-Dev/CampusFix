@@ -2,7 +2,8 @@ param(
   [string]$Flutter = "flutter",
   [int]$BackendPort = 8001,
   [int]$WebPort = 8791,
-  [string]$AndroidApkUrl = "https://github.com/Chuan2018-dev/CAMPUSFIX/releases/latest/download/CampusFix.apk",
+  [string]$AndroidApkUrl = "",
+  [switch]$SkipApkBuild,
   [switch]$SkipBuild
 )
 
@@ -10,6 +11,7 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $backendRoot = Join-Path $projectRoot "backend"
 $nodeServer = Join-Path $projectRoot "tools\campusfix_lan_server.js"
+$prepareAndroidDownload = Join-Path $projectRoot "tools\prepare_android_download.ps1"
 $runId = Get-Date -Format "yyyyMMdd-HHmmss"
 $logRoot = Join-Path $projectRoot "tools\public_demo_logs\$runId"
 $urlsFile = Join-Path $projectRoot "tools\public_demo_urls.txt"
@@ -139,8 +141,17 @@ try {
     throw "SkipBuild is not supported for public demo tunnels because Flutter web needs the current API tunnel URL compiled into the build."
   }
 
+  if (-not $SkipApkBuild) {
+    Write-Host "Building downloadable Android APK with API base $apiBase..."
+    & $prepareAndroidDownload -Flutter $Flutter -ApiBase $apiBase
+  }
+
   Write-Host "Building Flutter web with API base $apiBase..."
-  & $Flutter build web --release "--dart-define=CAMPUSFIX_API_BASE=$apiBase" "--dart-define=CAMPUSFIX_ANDROID_APK_URL=$AndroidApkUrl"
+  $webBuildArgs = @("build", "web", "--release", "--dart-define=CAMPUSFIX_API_BASE=$apiBase")
+  if (-not [string]::IsNullOrWhiteSpace($AndroidApkUrl)) {
+    $webBuildArgs += "--dart-define=CAMPUSFIX_ANDROID_APK_URL=$AndroidApkUrl"
+  }
+  & $Flutter @webBuildArgs
 
   $webLocalUrl = "http://127.0.0.1:$WebPort"
   if (-not (Test-HttpReady $webLocalUrl)) {
@@ -150,6 +161,13 @@ try {
 
   Wait-HttpReady $webLocalUrl "CampusFix web server"
   $webTunnel = Start-Tunnel "web" $webLocalUrl $cloudflared $logRoot
+  $downloadUrl = if ([string]::IsNullOrWhiteSpace($AndroidApkUrl)) {
+    "$($webTunnel.Url)/downloads/CampusFix.apk"
+  } elseif ([System.Uri]::IsWellFormedUriString($AndroidApkUrl, [System.UriKind]::Absolute)) {
+    $AndroidApkUrl
+  } else {
+    "$($webTunnel.Url)/$($AndroidApkUrl.TrimStart('/'))"
+  }
 
   $output = @"
 CampusFix public demo links
@@ -165,7 +183,7 @@ Health check:
 $($backendTunnel.Url)/api/health
 
 Android APK:
-$AndroidApkUrl
+$downloadUrl
 
 Process IDs:
 Backend tunnel: $($backendTunnel.ProcessId)
