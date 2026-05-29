@@ -1,7 +1,10 @@
 #!/bin/sh
 set -e
 
-if [ -n "$AIVEN_CA_CERT" ]; then
+if [ -n "$AIVEN_CA_CERT_BASE64" ]; then
+  printf "%s" "$AIVEN_CA_CERT_BASE64" | base64 -d > /tmp/aiven-ca.pem
+  export MYSQL_ATTR_SSL_CA=/tmp/aiven-ca.pem
+elif [ -n "$AIVEN_CA_CERT" ]; then
   printf "%s" "$AIVEN_CA_CERT" > /tmp/aiven-ca.pem
   export MYSQL_ATTR_SSL_CA=/tmp/aiven-ca.pem
 fi

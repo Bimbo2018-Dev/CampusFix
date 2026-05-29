@@ -110,6 +110,7 @@ Deployment files have been added:
 - `wrangler.toml` and `.github/workflows/deploy_cloudflare_pages.yml` for Cloudflare Pages.
 - `.github/workflows/release_android_apk.yml` for GitHub Release APK builds.
 - `tools/build_cloudflare_web.ps1` for a local Cloudflare-style web build.
+- `tools/connect_free_cloud_stack.ps1` for assisted GitHub, Koyeb, Cloudflare, and APK release deployment.
 - `docs/DEPLOYMENT.md` for the full setup checklist and required secrets/variables.
 
 Cloud deployment uses `CAMPUSFIX_API_BASE` for the Koyeb API URL and `CAMPUSFIX_ANDROID_APK_URL` for the GitHub Release APK URL. Cloudinary can be enabled with `CAMPUSFIX_IMAGE_DRIVER=cloudinary`.

@@ -3,6 +3,7 @@ param(
   [switch]$LoginGitHub,
   [switch]$CreateCloudflareProject,
   [switch]$DeployCloudflareNow,
+  [switch]$DeployKoyebBackend,
   [switch]$RunAndroidReleaseWorkflow
 )
 
@@ -67,6 +68,16 @@ try {
   $cloudflareProject = Require-Value $values "CLOUDFLARE_PROJECT_NAME"
   $cloudflareAccountId = Require-Value $values "CLOUDFLARE_ACCOUNT_ID"
   $cloudflareToken = Require-Value $values "CLOUDFLARE_API_TOKEN"
+  $appKey = $values["APP_KEY"]
+
+  if ([string]::IsNullOrWhiteSpace($appKey)) {
+    Push-Location backend
+    try {
+      $appKey = php artisan key:generate --show
+    } finally {
+      Pop-Location
+    }
+  }
 
   if (-not (Test-Path .git)) {
     git init -b main
@@ -98,6 +109,62 @@ try {
     Invoke-Gh @("workflow", "run", "release_android_apk.yml", "--repo", $repo, "--ref", "main")
   }
 
+  if ($DeployKoyebBackend) {
+    $koyebToken = Require-Value $values "KOYEB_TOKEN"
+    $koyebApp = Require-Value $values "KOYEB_APP_NAME"
+    $koyebService = Require-Value $values "KOYEB_SERVICE_NAME"
+    $koyebRegion = Require-Value $values "KOYEB_REGION"
+    $koyebInstanceType = Require-Value $values "KOYEB_INSTANCE_TYPE"
+    $appUrl = Require-Value $values "APP_URL"
+    $dbHost = Require-Value $values "DB_HOST"
+    $dbPort = Require-Value $values "DB_PORT"
+    $dbDatabase = Require-Value $values "DB_DATABASE"
+    $dbUsername = Require-Value $values "DB_USERNAME"
+    $dbPassword = Require-Value $values "DB_PASSWORD"
+    $aivenCaCertBase64 = Require-Value $values "AIVEN_CA_CERT_BASE64"
+    $cloudinaryCloudName = Require-Value $values "CLOUDINARY_CLOUD_NAME"
+    $cloudinaryApiKey = Require-Value $values "CLOUDINARY_API_KEY"
+    $cloudinaryApiSecret = Require-Value $values "CLOUDINARY_API_SECRET"
+
+    $koyebArgs = @(
+      "deploy",
+      "backend",
+      "$koyebApp/$koyebService",
+      "--token", $koyebToken,
+      "--archive-builder", "docker",
+      "--archive-docker-dockerfile", "Dockerfile",
+      "--instance-type", $koyebInstanceType,
+      "--regions", $koyebRegion,
+      "--ports", "8000:http",
+      "--routes", "/:8000",
+      "--env", "APP_NAME=CampusFix",
+      "--env", "APP_ENV=production",
+      "--env", "APP_KEY=$appKey",
+      "--env", "APP_DEBUG=false",
+      "--env", "APP_URL=$appUrl",
+      "--env", "LOG_CHANNEL=stderr",
+      "--env", "RUN_MIGRATIONS=true",
+      "--env", "RUN_SEEDER=true",
+      "--env", "DB_CONNECTION=mysql",
+      "--env", "DB_HOST=$dbHost",
+      "--env", "DB_PORT=$dbPort",
+      "--env", "DB_DATABASE=$dbDatabase",
+      "--env", "DB_USERNAME=$dbUsername",
+      "--env", "DB_PASSWORD=$dbPassword",
+      "--env", "AIVEN_CA_CERT_BASE64=$aivenCaCertBase64",
+      "--env", "CAMPUSFIX_IMAGE_DRIVER=cloudinary",
+      "--env", "CLOUDINARY_CLOUD_NAME=$cloudinaryCloudName",
+      "--env", "CLOUDINARY_API_KEY=$cloudinaryApiKey",
+      "--env", "CLOUDINARY_API_SECRET=$cloudinaryApiSecret",
+      "--wait"
+    )
+
+    & ".\.tools\koyeb\koyeb.exe" @koyebArgs
+    if ($LASTEXITCODE -ne 0) {
+      throw "Koyeb backend deployment failed."
+    }
+  }
+
   if ($CreateCloudflareProject -or $DeployCloudflareNow) {
     $env:CLOUDFLARE_API_TOKEN = $cloudflareToken
     $env:CLOUDFLARE_ACCOUNT_ID = $cloudflareAccountId
@@ -112,8 +179,7 @@ try {
     npx --yes wrangler@latest pages deploy build/web --project-name $cloudflareProject --branch main
   }
 
-  Write-Host "CampusFix GitHub and Cloudflare deployment setup completed."
-  Write-Host "Koyeb/Aiven/Cloudinary values are in $EnvFile for backend deployment."
+  Write-Host "CampusFix deployment setup completed."
 } finally {
   Pop-Location
 }

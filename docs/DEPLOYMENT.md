@@ -19,10 +19,10 @@ DB_PORT=<AIVEN_MYSQL_PORT>
 DB_DATABASE=<AIVEN_MYSQL_DATABASE>
 DB_USERNAME=<AIVEN_MYSQL_USER>
 DB_PASSWORD=<AIVEN_MYSQL_PASSWORD>
-AIVEN_CA_CERT=<PASTE_AIVEN_CA_CERT_CONTENT_HERE>
+AIVEN_CA_CERT_BASE64=<BASE64_ENCODED_AIVEN_CA_CERT>
 ```
 
-The Koyeb Docker start script writes `AIVEN_CA_CERT` to `/tmp/aiven-ca.pem` and exposes it to Laravel as `MYSQL_ATTR_SSL_CA`.
+The Koyeb Docker start script decodes `AIVEN_CA_CERT_BASE64` to `/tmp/aiven-ca.pem` and exposes it to Laravel as `MYSQL_ATTR_SSL_CA`.
 
 ## 2. Cloudinary
 
@@ -61,7 +61,7 @@ DB_PORT=<AIVEN_MYSQL_PORT>
 DB_DATABASE=<AIVEN_MYSQL_DATABASE>
 DB_USERNAME=<AIVEN_MYSQL_USER>
 DB_PASSWORD=<AIVEN_MYSQL_PASSWORD>
-AIVEN_CA_CERT=<AIVEN_CA_CERT_CONTENT>
+AIVEN_CA_CERT_BASE64=<BASE64_ENCODED_AIVEN_CA_CERT>
 
 CAMPUSFIX_IMAGE_DRIVER=cloudinary
 CLOUDINARY_CLOUD_NAME=<CLOUDINARY_CLOUD_NAME>
@@ -167,3 +167,33 @@ The script builds `build/web` and removes `build/web/downloads`, because Cloudfl
 5. Run GitHub APK release workflow.
 6. Deploy Flutter PWA to Cloudflare Pages.
 7. Open the Cloudflare Pages URL and test login, registration, report creation, photo upload, admin reports, and APK download.
+
+## 8. One-command Assisted Deployment
+
+The helper script `tools/connect_free_cloud_stack.ps1` can push the repository, set GitHub Actions variables/secrets, deploy the Laravel backend to Koyeb, trigger the Android APK release workflow, and deploy the Flutter PWA to Cloudflare Pages.
+
+Prepare the private deployment file:
+
+```powershell
+cd C:\laragon\www\CampusFix
+copy .env.deploy.example .env.deploy
+```
+
+Fill `.env.deploy` with the real Cloudflare, Koyeb, Aiven, and Cloudinary values. This file is ignored by Git.
+
+Then run:
+
+```powershell
+.\tools\connect_free_cloud_stack.ps1 `
+  -LoginGitHub `
+  -DeployKoyebBackend `
+  -RunAndroidReleaseWorkflow `
+  -CreateCloudflareProject `
+  -DeployCloudflareNow
+```
+
+For the Aiven certificate value, encode the CA file locally:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\aiven-ca.pem"))
+```
