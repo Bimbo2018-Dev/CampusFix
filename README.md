@@ -99,7 +99,8 @@ Users can install the PWA from Chrome, Edge, Brave, or Android browser. On a lap
 Recommended free-friendly hosting stack:
 
 - Flutter PWA: Cloudflare Pages
-- Laravel API: Alwaysdata Free Public Cloud when Koyeb asks for bank details and Render is already used
+- Laravel API demo: Cloudflare Tunnel from your laptop for zero-card school presentation
+- Laravel API: Alwaysdata Free Public Cloud only if the account does not require card validation
 - Laravel API fallback: InfinityFree shared PHP hosting for capstone demo use
 - MySQL database: Alwaysdata MariaDB or Aiven MySQL Free
 - Report photos: Cloudinary
@@ -112,10 +113,19 @@ Deployment files have been added:
 - `wrangler.toml` and `.github/workflows/deploy_cloudflare_pages.yml` for Cloudflare Pages.
 - `.github/workflows/release_android_apk.yml` for GitHub Release APK builds.
 - `tools/build_cloudflare_web.ps1` for a local Cloudflare-style web build.
+- `tools/start_public_demo_tunnels.ps1` for zero-card public demo links through Cloudflare Tunnel.
 - `tools/connect_free_cloud_stack.ps1` for assisted GitHub, Koyeb, Cloudflare, and APK release deployment.
 - `docs/DEPLOYMENT.md` for the full setup checklist and required secrets/variables.
 
 Cloud deployment uses `CAMPUSFIX_API_BASE` for the Koyeb API URL and `CAMPUSFIX_ANDROID_APK_URL` for the GitHub Release APK URL. Cloudinary can be enabled with `CAMPUSFIX_IMAGE_DRIVER=cloudinary`.
+
+For a demo presentation without credit-card validation, run:
+
+```powershell
+.\tools\start_public_demo_tunnels.ps1
+```
+
+It prints a temporary public PWA link and API link. Keep the laptop awake while presenting because the Laravel API and web app are running from this machine.
 
 ## Downloadable Android App
 

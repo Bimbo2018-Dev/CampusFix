@@ -4,7 +4,8 @@ This guide deploys CampusFix with the recommended free-friendly stack.
 
 If Koyeb asks for bank/payment details, use one of these no-card alternatives:
 
-- Laravel REST API: Alwaysdata Free Public Cloud, best no-card Laravel option
+- Laravel REST API demo: Cloudflare Tunnel from your laptop, best zero-card presentation option
+- Laravel REST API: Alwaysdata Free Public Cloud, if your account does not require card validation
 - Laravel REST API fallback: InfinityFree shared PHP hosting
 - Laravel REST API fallback: Render Free Web Service, only if your free slot is still available
 - MySQL database: Aiven MySQL Free
@@ -16,6 +17,48 @@ Render's first free web service deploy does not require payment, and Aiven's fre
 - MySQL database: Aiven MySQL Free
 - Report photos: Cloudinary
 - Android APK downloads: GitHub Releases
+
+## 0. Cloudflare Tunnel Public Demo, Zero Credit Card
+
+Use this option for a capstone/demo presentation when Koyeb, Alwaysdata, or other hosts ask for bank/card validation.
+
+This setup does not permanently deploy the Laravel backend to a hosting provider. Instead, it:
+
+- Runs Laravel on this laptop.
+- Uses the Aiven cloud MySQL database.
+- Uses Cloudinary for report photos.
+- Builds the Flutter PWA with the public tunnel API URL.
+- Opens two temporary Cloudflare `trycloudflare.com` HTTPS links, one for the API and one for the PWA.
+
+Requirements:
+
+- Keep the laptop on and connected to the internet during the demo.
+- Do not close the background Laravel/web/tunnel processes while presenting.
+- The public URLs change every time the tunnels are restarted.
+
+Run:
+
+```powershell
+cd C:\laragon\www\CampusFix
+.\tools\start_public_demo_tunnels.ps1
+```
+
+The script prints:
+
+```text
+Frontend PWA: https://<temporary-name>.trycloudflare.com
+Laravel API:  https://<temporary-name>.trycloudflare.com/api
+```
+
+Open the frontend PWA link on your laptop and phone. Registration, login, report submission, admin reports, and photo upload will use the same Aiven database through the Laravel API tunnel.
+
+If you only need to reopen tunnels without rebuilding Flutter, run:
+
+```powershell
+.\tools\start_public_demo_tunnels.ps1 -SkipBuild
+```
+
+For a real always-online deployment, use Cloudflare Pages plus a permanent Laravel host. For a school presentation, this tunnel setup is the fastest no-card route.
 
 ## 1. Aiven MySQL
 
@@ -332,9 +375,18 @@ cd C:\laragon\www\CampusFix
 
 The script builds `build/web` and removes `build/web/downloads`, because Cloudflare Pages has a single-asset size limit and the APK belongs in GitHub Releases.
 
-## 10. Recommended No-card Deployment Order
+## 10. Recommended Zero-card Demo Order
 
-1. Create Alwaysdata free account.
+1. Configure Aiven MySQL in `backend/.env`.
+2. Configure Cloudinary in `backend/.env`.
+3. Run Laravel migrations and seeders.
+4. Run `.\tools\start_public_demo_tunnels.ps1`.
+5. Open the printed Frontend PWA URL on the laptop and phone.
+6. Test registration, login, report creation, photo upload, admin account list, all reports, and downloadable APK button.
+
+## 11. Recommended No-card Deployment Order
+
+1. Create Alwaysdata free account, if it does not require card validation.
 2. Create Cloudinary credentials.
 3. Deploy Laravel backend to Alwaysdata.
 4. Verify `https://campusfix.alwaysdata.net/api/health`.
@@ -342,7 +394,7 @@ The script builds `build/web` and removes `build/web/downloads`, because Cloudfl
 6. Deploy Flutter PWA to Cloudflare Pages.
 7. Open the Cloudflare Pages URL and test login, registration, report creation, photo upload, admin reports, and APK download.
 
-## 11. Render No-card Deployment Order
+## 12. Render No-card Deployment Order
 
 1. Create Aiven MySQL.
 2. Create Cloudinary credentials.
@@ -352,7 +404,7 @@ The script builds `build/web` and removes `build/web/downloads`, because Cloudfl
 6. Deploy Flutter PWA to Cloudflare Pages.
 7. Open the Cloudflare Pages URL and test login, registration, report creation, photo upload, admin reports, and APK download.
 
-## 12. Koyeb Deployment Order
+## 13. Koyeb Deployment Order
 
 1. Create Aiven MySQL.
 2. Create Cloudinary credentials.
@@ -362,7 +414,7 @@ The script builds `build/web` and removes `build/web/downloads`, because Cloudfl
 6. Deploy Flutter PWA to Cloudflare Pages.
 7. Open the Cloudflare Pages URL and test login, registration, report creation, photo upload, admin reports, and APK download.
 
-## 13. One-command Assisted Deployment
+## 14. One-command Assisted Deployment
 
 The helper script `tools/connect_free_cloud_stack.ps1` can push the repository, set GitHub Actions variables/secrets, deploy the Laravel backend to Koyeb, trigger the Android APK release workflow, and deploy the Flutter PWA to Cloudflare Pages.
 
