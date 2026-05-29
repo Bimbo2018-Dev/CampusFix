@@ -1,0 +1,52 @@
+name: Deploy Flutter PWA to Cloudflare Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "lib/**"
+      - "assets/**"
+      - "web/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "wrangler.toml"
+      - ".github/workflows/deploy_cloudflare_pages.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build Flutter web
+        run: |
+          flutter build web --release \
+            --dart-define=CAMPUSFIX_API_BASE="${{ vars.CAMPUSFIX_API_BASE }}" \
+            --dart-define=CAMPUSFIX_ANDROID_APK_URL="${{ vars.CAMPUSFIX_ANDROID_APK_URL }}"
+          rm -rf build/web/downloads
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy build/web --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME }}

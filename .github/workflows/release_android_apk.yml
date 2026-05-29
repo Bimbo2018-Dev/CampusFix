@@ -1,0 +1,67 @@
+name: Build Android APK Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "android-v*"
+
+jobs:
+  release-apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: |
+          SIGNATURE="android-$(date +%s%3N)"
+          UPDATE_METADATA_URL="https://github.com/${{ github.repository }}/releases/latest/download/campusfix_android_version.json"
+          echo "CAMPUSFIX_ANDROID_BUILD_SIGNATURE=$SIGNATURE" >> "$GITHUB_ENV"
+          echo "CAMPUSFIX_ANDROID_UPDATE_METADATA_URL=$UPDATE_METADATA_URL" >> "$GITHUB_ENV"
+          flutter build apk --release \
+            --dart-define=CAMPUSFIX_API_BASE="${{ vars.CAMPUSFIX_API_BASE }}" \
+            --dart-define=CAMPUSFIX_ANDROID_BUILD_SIGNATURE="$SIGNATURE" \
+            --dart-define=CAMPUSFIX_ANDROID_UPDATE_METADATA_URL="$UPDATE_METADATA_URL"
+          cp build/app/outputs/flutter-apk/app-release.apk CampusFix.apk
+
+      - name: Write update metadata
+        run: |
+          APK_SHA="$(sha256sum CampusFix.apk | awk '{print $1}')"
+          APK_SIZE="$(stat -c%s CampusFix.apk)"
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/latest/download/CampusFix.apk"
+          cat > campusfix_android_version.json <<JSON
+          {
+            "app": "CampusFix",
+            "platform": "android",
+            "signature": "${CAMPUSFIX_ANDROID_BUILD_SIGNATURE}",
+            "version": "1.0.0+1",
+            "apiBase": "${{ vars.CAMPUSFIX_API_BASE }}",
+            "file": "CampusFix.apk",
+            "downloadPath": "${DOWNLOAD_URL}",
+            "generatedAt": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "size": ${APK_SIZE},
+            "sha256": "${APK_SHA}"
+          }
+          JSON
+
+      - name: Publish GitHub Release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('android-v{0}', github.run_number) }}
+          name: CampusFix Android ${{ github.ref_type == 'tag' && github.ref_name || github.run_number }}
+          files: |
+            CampusFix.apk
+            campusfix_android_version.json

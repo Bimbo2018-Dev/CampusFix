@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="CampusFix helps students, teachers, and admins report, track, validate, and resolve campus maintenance concerns.">
+  <meta name="theme-color" content="#000666">
+  <meta name="application-name" content="CampusFix">
+  <meta name="msapplication-TileColor" content="#000666">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CampusFix">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>CampusFix</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: #F8F9FA;
+    }
+
+    #loading {
+      align-items: center;
+      color: #000666;
+      display: flex;
+      flex-direction: column;
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: 800;
+      gap: 16px;
+      height: 100%;
+      justify-content: center;
+    }
+
+    #loading-logo {
+      border-radius: 28px;
+      box-shadow: 0 18px 36px rgba(0, 6, 102, 0.14);
+      height: 112px;
+      object-fit: contain;
+      width: 112px;
+    }
+
+    #update-notice {
+      align-items: center;
+      background: #000666;
+      border-radius: 999px;
+      bottom: 18px;
+      box-shadow: 0 12px 28px rgba(0, 6, 102, 0.22);
+      color: #FFFFFF;
+      display: none;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      gap: 10px;
+      left: 50%;
+      padding: 12px 18px;
+      position: fixed;
+      transform: translateX(-50%);
+      z-index: 9999;
+    }
+
+    #update-notice::before {
+      animation: campusfix-spin 0.8s linear infinite;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      content: "";
+      height: 14px;
+      width: 14px;
+    }
+
+    @keyframes campusfix-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading" aria-label="CampusFix loading">
+    <img id="loading-logo" src="icons/campusfix-logo.png" alt="CampusFix logo">
+    <div>CampusFix</div>
+  </div>
+  <div id="update-notice" role="status" aria-live="polite">
+    Updating CampusFix...
+  </div>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script>
+    (function () {
+      var deferredInstallPrompt = null;
+
+      function isStandalone() {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+          window.navigator.standalone === true;
+      }
+
+      window.addEventListener('beforeinstallprompt', function (event) {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+      });
+
+      window.addEventListener('appinstalled', function () {
+        deferredInstallPrompt = null;
+      });
+
+      window.campusfixInstallStatus = function () {
+        if (isStandalone()) return 'alreadyInstalled';
+        return deferredInstallPrompt ? 'ready' : 'unavailable';
+      };
+
+      window.campusfixInstallApp = async function () {
+        if (isStandalone()) return 'alreadyInstalled';
+        if (!deferredInstallPrompt) return 'unavailable';
+
+        var promptEvent = deferredInstallPrompt;
+        deferredInstallPrompt = null;
+        promptEvent.prompt();
+
+        try {
+          var choice = await promptEvent.userChoice;
+          return choice && choice.outcome === 'accepted'
+            ? 'pwaInstall'
+            : 'cancelled';
+        } catch (_) {
+          return 'pwaInstall';
+        }
+      };
+    })();
+  </script>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var loading = document.getElementById('loading');
+      if (loading) loading.remove();
+    });
+  </script>
+  <script>
+    (function () {
+      var checkIntervalMs = 5000;
+      var currentSignature = null;
+      var reloading = false;
+
+      function showUpdateNotice() {
+        var notice = document.getElementById('update-notice');
+        if (notice) notice.style.display = 'flex';
+      }
+
+      function headerSignature(response) {
+        return response.headers.get('x-campusfix-build') ||
+          response.headers.get('etag') ||
+          response.headers.get('last-modified') ||
+          response.headers.get('content-length');
+      }
+
+      async function fetchBuildSignature() {
+        try {
+          var versionResponse = await fetch('__campusfix_version.json?ts=' + Date.now(), {
+            cache: 'no-store',
+          });
+          if (versionResponse.ok) {
+            var data = await versionResponse.json();
+            if (data && data.signature) return data.signature;
+          }
+        } catch (_) {}
+
+        try {
+          var scriptResponse = await fetch('main.dart.js?ts=' + Date.now(), {
+            cache: 'no-store',
+            method: 'HEAD',
+          });
+          if (scriptResponse.ok) return headerSignature(scriptResponse);
+        } catch (_) {}
+
+        return null;
+      }
+
+      async function checkForUpdate() {
+        if (reloading) return;
+
+        var nextSignature = await fetchBuildSignature();
+        if (!nextSignature) return;
+
+        if (!currentSignature) {
+          currentSignature = nextSignature;
+          return;
+        }
+
+        if (nextSignature !== currentSignature) {
+          reloading = true;
+          showUpdateNotice();
+          setTimeout(function () {
+            window.location.reload();
+          }, 650);
+        }
+      }
+
+      window.addEventListener('flutter-first-frame', function () {
+        checkForUpdate();
+        window.setInterval(checkForUpdate, checkIntervalMs);
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) checkForUpdate();
+      });
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
