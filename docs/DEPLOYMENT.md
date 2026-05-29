@@ -1,16 +1,23 @@
 # CampusFix Free Cloud Deployment Guide
 
-This guide deploys CampusFix with the recommended free-friendly stack:
+This guide deploys CampusFix with the recommended free-friendly stack.
+
+If Koyeb asks for bank/payment details, use the no-card alternative:
+
+- Laravel REST API: Render Free Web Service
+- MySQL database: Aiven MySQL Free
+
+Render's first free web service deploy does not require payment, and Aiven's free account does not require payment details.
 
 - Flutter PWA: Cloudflare Pages
-- Laravel REST API: Koyeb
+- Laravel REST API: Render Free Web Service or Koyeb
 - MySQL database: Aiven MySQL Free
 - Report photos: Cloudinary
 - Android APK downloads: GitHub Releases
 
 ## 1. Aiven MySQL
 
-Create a free Aiven MySQL service, then copy these values into Koyeb environment variables:
+Create a free Aiven MySQL service, then copy these values into your backend host environment variables:
 
 ```text
 DB_CONNECTION=mysql
@@ -22,13 +29,13 @@ DB_PASSWORD=<AIVEN_MYSQL_PASSWORD>
 AIVEN_CA_CERT_BASE64=<BASE64_ENCODED_AIVEN_CA_CERT>
 ```
 
-The Koyeb Docker start script decodes `AIVEN_CA_CERT_BASE64` to `/tmp/aiven-ca.pem` and exposes it to Laravel as `MYSQL_ATTR_SSL_CA`.
+The Docker start script decodes `AIVEN_CA_CERT_BASE64` to `/tmp/aiven-ca.pem` and exposes it to Laravel as `MYSQL_ATTR_SSL_CA`.
 
 ## 2. Cloudinary
 
 Create a free Cloudinary account and get the cloud name, API key, and API secret.
 
-Add these to Koyeb:
+Add these to Render or Koyeb:
 
 ```text
 CAMPUSFIX_IMAGE_DRIVER=cloudinary
@@ -39,7 +46,68 @@ CLOUDINARY_API_SECRET=<CLOUDINARY_API_SECRET>
 
 When Cloudinary is enabled, CampusFix uploads report photos and resolution photos to Cloudinary and stores the returned HTTPS URL in MySQL. Local development still supports inline data URLs when `CAMPUSFIX_IMAGE_DRIVER=local`.
 
-## 3. Koyeb Laravel API
+## 3. Render Laravel API, No Bank Details
+
+Use this option if Koyeb asks for bank details.
+
+CampusFix includes `render.yaml` in the repo root. Render can create the service from that file.
+
+1. Sign in to Render.
+2. Choose **New > Blueprint**.
+3. Connect `https://github.com/Chuan2018-dev/CAMPUSFIX`.
+4. Select the `main` branch.
+5. Render detects `render.yaml`.
+6. Fill the required secret values when prompted.
+
+Required Render secret/env values:
+
+```text
+APP_KEY=<GENERATE_WITH_php_artisan_key_generate_show>
+DB_HOST=<AIVEN_MYSQL_HOST>
+DB_PORT=<AIVEN_MYSQL_PORT>
+DB_DATABASE=<AIVEN_MYSQL_DATABASE>
+DB_USERNAME=<AIVEN_MYSQL_USER>
+DB_PASSWORD=<AIVEN_MYSQL_PASSWORD>
+AIVEN_CA_CERT_BASE64=<BASE64_ENCODED_AIVEN_CA_CERT>
+CLOUDINARY_CLOUD_NAME=<CLOUDINARY_CLOUD_NAME>
+CLOUDINARY_API_KEY=<CLOUDINARY_API_KEY>
+CLOUDINARY_API_SECRET=<CLOUDINARY_API_SECRET>
+```
+
+Generate `APP_KEY` locally:
+
+```powershell
+cd C:\laragon\www\CampusFix\backend
+php artisan key:generate --show
+```
+
+Generate the Aiven certificate base64 value:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\aiven-ca.pem"))
+```
+
+After deployment, verify:
+
+```text
+https://campusfix-api.onrender.com/api/health
+```
+
+Expected:
+
+```json
+{"status":"ok","app":"CampusFix"}
+```
+
+Use this API URL for Flutter/Cloudflare/GitHub Actions:
+
+```text
+https://campusfix-api.onrender.com/api
+```
+
+Render Free limitation: the backend may sleep after inactivity, so the first request after a pause can be slow.
+
+## 4. Koyeb Laravel API
 
 Deploy the `backend/` folder as a Docker service.
 
@@ -88,14 +156,14 @@ Expected:
 {"status":"ok","app":"CampusFix"}
 ```
 
-## 4. GitHub Releases for APK
+## 5. GitHub Releases for APK
 
 The workflow `.github/workflows/release_android_apk.yml` builds `CampusFix.apk` and uploads it to a GitHub Release.
 
 Set this GitHub repository variable:
 
 ```text
-CAMPUSFIX_API_BASE=https://<YOUR_KOYEB_APP>.koyeb.app/api
+CAMPUSFIX_API_BASE=https://campusfix-api.onrender.com/api
 ```
 
 Run the workflow manually, or push a tag:
@@ -117,7 +185,7 @@ APK update metadata URL format:
 https://github.com/<OWNER>/<REPO>/releases/latest/download/campusfix_android_version.json
 ```
 
-## 5. Cloudflare Pages for Flutter PWA
+## 6. Cloudflare Pages for Flutter PWA
 
 Create a Cloudflare Pages project named `campusfix`.
 
@@ -125,7 +193,7 @@ GitHub repository variables:
 
 ```text
 CLOUDFLARE_PROJECT_NAME=campusfix
-CAMPUSFIX_API_BASE=https://<YOUR_KOYEB_APP>.koyeb.app/api
+CAMPUSFIX_API_BASE=https://campusfix-api.onrender.com/api
 CAMPUSFIX_ANDROID_APK_URL=https://github.com/<OWNER>/<REPO>/releases/latest/download/CampusFix.apk
 ```
 
@@ -141,24 +209,34 @@ The workflow `.github/workflows/deploy_cloudflare_pages.yml`:
 1. Installs Flutter.
 2. Runs `flutter analyze`.
 3. Runs `flutter test`.
-4. Builds the PWA with the Koyeb API URL and GitHub APK URL.
+4. Builds the PWA with the Laravel API URL and GitHub APK URL.
 5. Removes local APK files so Cloudflare Pages does not reject the deployment.
 6. Deploys `build/web` to Cloudflare Pages.
 
-## 6. Local Cloudflare-style Build
+## 7. Local Cloudflare-style Build
 
 Use this before pushing:
 
 ```powershell
 cd C:\laragon\www\CampusFix
 .\tools\build_cloudflare_web.ps1 `
-  -ApiBase "https://<YOUR_KOYEB_APP>.koyeb.app/api" `
+  -ApiBase "https://campusfix-api.onrender.com/api" `
   -AndroidApkUrl "https://github.com/<OWNER>/<REPO>/releases/latest/download/CampusFix.apk"
 ```
 
 The script builds `build/web` and removes `build/web/downloads`, because Cloudflare Pages has a single-asset size limit and the APK belongs in GitHub Releases.
 
-## 7. Deployment Order
+## 8. Recommended No-card Deployment Order
+
+1. Create Aiven MySQL.
+2. Create Cloudinary credentials.
+3. Deploy Laravel backend to Render using `render.yaml`.
+4. Verify `https://campusfix-api.onrender.com/api/health`.
+5. Run GitHub APK release workflow.
+6. Deploy Flutter PWA to Cloudflare Pages.
+7. Open the Cloudflare Pages URL and test login, registration, report creation, photo upload, admin reports, and APK download.
+
+## 9. Koyeb Deployment Order
 
 1. Create Aiven MySQL.
 2. Create Cloudinary credentials.
@@ -168,9 +246,11 @@ The script builds `build/web` and removes `build/web/downloads`, because Cloudfl
 6. Deploy Flutter PWA to Cloudflare Pages.
 7. Open the Cloudflare Pages URL and test login, registration, report creation, photo upload, admin reports, and APK download.
 
-## 8. One-command Assisted Deployment
+## 10. One-command Assisted Deployment
 
 The helper script `tools/connect_free_cloud_stack.ps1` can push the repository, set GitHub Actions variables/secrets, deploy the Laravel backend to Koyeb, trigger the Android APK release workflow, and deploy the Flutter PWA to Cloudflare Pages.
+
+For the no-card Render option, use Render's Blueprint flow with `render.yaml` for the backend, then use this script only for GitHub variables, Android release, and Cloudflare Pages.
 
 Prepare the private deployment file:
 

@@ -99,7 +99,7 @@ Users can install the PWA from Chrome, Edge, Brave, or Android browser. On a lap
 Recommended free-friendly hosting stack:
 
 - Flutter PWA: Cloudflare Pages
-- Laravel API: Koyeb Docker service
+- Laravel API: Render Free Web Service when Koyeb asks for bank details, or Koyeb Docker service if available
 - MySQL database: Aiven MySQL Free
 - Report photos: Cloudinary
 - Android APK download: GitHub Releases
@@ -107,6 +107,7 @@ Recommended free-friendly hosting stack:
 Deployment files have been added:
 
 - `backend/Dockerfile` and `backend/docker/start.sh` for Koyeb.
+- `render.yaml` for no-card Render deployment.
 - `wrangler.toml` and `.github/workflows/deploy_cloudflare_pages.yml` for Cloudflare Pages.
 - `.github/workflows/release_android_apk.yml` for GitHub Release APK builds.
 - `tools/build_cloudflare_web.ps1` for a local Cloudflare-style web build.
