@@ -34,7 +34,7 @@ class ApiCampusFixRepository {
   ApiCampusFixRepository({
     http.Client? client,
     String? baseUrl,
-    Duration timeout = const Duration(seconds: 5),
+    Duration timeout = const Duration(seconds: 20),
   })  : _client = client ?? http.Client(),
         _baseUrl = _normalizeBaseUrl(baseUrl ?? _defaultBaseUrl()),
         _timeout = timeout;
@@ -160,6 +160,9 @@ class ApiCampusFixRepository {
         'priority': priority,
         'imagePath': imagePath,
       },
+      timeout: imagePath == null
+          ? const Duration(seconds: 35)
+          : const Duration(seconds: 90),
     );
 
     return ReportModel.fromJson(Map<String, dynamic>.from(body['report']));
@@ -196,6 +199,7 @@ class ApiCampusFixRepository {
       'PATCH',
       '/reports/${Uri.encodeComponent(reportId)}',
       body: {'resolvedImagePath': resolvedImagePath},
+      timeout: const Duration(seconds: 90),
     );
 
     return ReportModel.fromJson(Map<String, dynamic>.from(body['report']));
@@ -243,6 +247,7 @@ class ApiCampusFixRepository {
     String path, {
     Map<String, dynamic>? body,
     bool authenticated = true,
+    Duration? timeout,
   }) async {
     final request = http.Request(method, Uri.parse('$_baseUrl$path'));
     request.headers['Accept'] = 'application/json';
@@ -260,7 +265,7 @@ class ApiCampusFixRepository {
 
     http.StreamedResponse streamed;
     try {
-      streamed = await _client.send(request).timeout(_timeout);
+      streamed = await _client.send(request).timeout(timeout ?? _timeout);
     } on TimeoutException {
       throw ApiCampusFixException(
         'Could not reach CampusFix API at $_baseUrl.',
