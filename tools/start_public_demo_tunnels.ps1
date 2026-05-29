@@ -135,10 +135,12 @@ try {
   $backendTunnel = Start-Tunnel "backend" $backendLocalUrl $cloudflared $logRoot
   $apiBase = "$($backendTunnel.Url)/api"
 
-  if (-not $SkipBuild) {
-    Write-Host "Building Flutter web with API base $apiBase..."
-    & $Flutter build web --release "--dart-define=CAMPUSFIX_API_BASE=$apiBase" "--dart-define=CAMPUSFIX_ANDROID_APK_URL=$AndroidApkUrl"
+  if ($SkipBuild) {
+    throw "SkipBuild is not supported for public demo tunnels because Flutter web needs the current API tunnel URL compiled into the build."
   }
+
+  Write-Host "Building Flutter web with API base $apiBase..."
+  & $Flutter build web --release "--dart-define=CAMPUSFIX_API_BASE=$apiBase" "--dart-define=CAMPUSFIX_ANDROID_APK_URL=$AndroidApkUrl"
 
   $webLocalUrl = "http://127.0.0.1:$WebPort"
   if (-not (Test-HttpReady $webLocalUrl)) {

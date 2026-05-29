@@ -52,12 +52,6 @@ Laravel API:  https://<temporary-name>.trycloudflare.com/api
 
 Open the frontend PWA link on your laptop and phone. Registration, login, report submission, admin reports, and photo upload will use the same Aiven database through the Laravel API tunnel.
 
-If you only need to reopen tunnels without rebuilding Flutter, run:
-
-```powershell
-.\tools\start_public_demo_tunnels.ps1 -SkipBuild
-```
-
 For a real always-online deployment, use Cloudflare Pages plus a permanent Laravel host. For a school presentation, this tunnel setup is the fastest no-card route.
 
 ## 1. Aiven MySQL
