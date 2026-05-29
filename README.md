@@ -99,8 +99,9 @@ Users can install the PWA from Chrome, Edge, Brave, or Android browser. On a lap
 Recommended free-friendly hosting stack:
 
 - Flutter PWA: Cloudflare Pages
-- Laravel API: Render Free Web Service when Koyeb asks for bank details, or Koyeb Docker service if available
-- MySQL database: Aiven MySQL Free
+- Laravel API: Alwaysdata Free Public Cloud when Koyeb asks for bank details and Render is already used
+- Laravel API fallback: InfinityFree shared PHP hosting for capstone demo use
+- MySQL database: Alwaysdata MariaDB or Aiven MySQL Free
 - Report photos: Cloudinary
 - Android APK download: GitHub Releases
 

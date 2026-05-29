@@ -2,15 +2,17 @@
 
 This guide deploys CampusFix with the recommended free-friendly stack.
 
-If Koyeb asks for bank/payment details, use the no-card alternative:
+If Koyeb asks for bank/payment details, use one of these no-card alternatives:
 
-- Laravel REST API: Render Free Web Service
+- Laravel REST API: Alwaysdata Free Public Cloud, best no-card Laravel option
+- Laravel REST API fallback: InfinityFree shared PHP hosting
+- Laravel REST API fallback: Render Free Web Service, only if your free slot is still available
 - MySQL database: Aiven MySQL Free
 
 Render's first free web service deploy does not require payment, and Aiven's free account does not require payment details.
 
 - Flutter PWA: Cloudflare Pages
-- Laravel REST API: Render Free Web Service or Koyeb
+- Laravel REST API: Alwaysdata, Render, Koyeb, or InfinityFree
 - MySQL database: Aiven MySQL Free
 - Report photos: Cloudinary
 - Android APK downloads: GitHub Releases
@@ -46,7 +48,111 @@ CLOUDINARY_API_SECRET=<CLOUDINARY_API_SECRET>
 
 When Cloudinary is enabled, CampusFix uploads report photos and resolution photos to Cloudinary and stores the returned HTTPS URL in MySQL. Local development still supports inline data URLs when `CAMPUSFIX_IMAGE_DRIVER=local`.
 
-## 3. Render Laravel API, No Bank Details
+## 3. Alwaysdata Laravel API, No Bank Details
+
+Use this option first if Koyeb asks for bank details and Render free is already used by another project.
+
+Why Alwaysdata fits CampusFix:
+
+- Supports PHP on its Public Cloud plans.
+- Supports MariaDB/MySQL databases.
+- Supports SSH/SFTP access.
+- Supports Composer for PHP packages.
+- Supports Laravel through its PHP/marketplace documentation.
+
+Recommended deployment shape:
+
+```text
+Flutter PWA        Cloudflare Pages
+Laravel API        Alwaysdata
+Database           Alwaysdata MariaDB or Aiven MySQL
+Photos             Cloudinary
+APK downloads      GitHub Releases
+```
+
+Alwaysdata steps:
+
+1. Create an Alwaysdata free account.
+2. Create a PHP site, for example `campusfix.alwaysdata.net`.
+3. Set the PHP version to PHP 8.3 or newer.
+4. Create a MariaDB database, or keep using Aiven MySQL.
+5. Enable SSH access.
+6. Upload or clone the GitHub repo.
+7. Inside the `backend` folder, run:
+
+```bash
+composer install --no-dev --optimize-autoloader
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --force
+php artisan db:seed --force
+php artisan config:cache
+```
+
+8. Set the Alwaysdata website root to:
+
+```text
+backend/public
+```
+
+9. Set the backend `.env`:
+
+```text
+APP_NAME=CampusFix
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://campusfix.alwaysdata.net
+DB_CONNECTION=mysql
+DB_HOST=<ALWAYSDATA_OR_AIVEN_DB_HOST>
+DB_PORT=3306
+DB_DATABASE=<DATABASE_NAME>
+DB_USERNAME=<DATABASE_USER>
+DB_PASSWORD=<DATABASE_PASSWORD>
+CAMPUSFIX_IMAGE_DRIVER=cloudinary
+CLOUDINARY_CLOUD_NAME=<CLOUDINARY_CLOUD_NAME>
+CLOUDINARY_API_KEY=<CLOUDINARY_API_KEY>
+CLOUDINARY_API_SECRET=<CLOUDINARY_API_SECRET>
+```
+
+10. Verify:
+
+```text
+https://campusfix.alwaysdata.net/api/health
+```
+
+Use this API URL for Flutter/Cloudflare/GitHub Actions:
+
+```text
+https://campusfix.alwaysdata.net/api
+```
+
+Alwaysdata limitation: the free account is smaller than Render/Koyeb, so keep uploaded photos on Cloudinary and avoid storing large files in Laravel storage.
+
+## 4. InfinityFree Laravel API Fallback, No Bank Details
+
+Use InfinityFree only if Alwaysdata is not available. InfinityFree is explicitly no credit card, supports PHP 8.3, MySQL/MariaDB, free SSL, and free subdomains. It is less developer-friendly for Laravel because it is FTP/control-panel based and does not provide the same SSH/Composer workflow.
+
+Recommended shape:
+
+```text
+Flutter PWA        Cloudflare Pages
+Laravel API        InfinityFree shared hosting
+Database           InfinityFree MySQL
+Photos             Cloudinary
+APK downloads      GitHub Releases
+```
+
+InfinityFree notes:
+
+- Use PHP 8.3.
+- Import SQL manually through phpMyAdmin or run migrations locally then export SQL.
+- Upload a production-ready Laravel backend with `vendor/` already installed.
+- Point the domain/subdomain document root to Laravel `public`.
+- If document root cannot be changed, copy Laravel `public` contents to the hosting web root and adjust `index.php` paths to point to the Laravel app folder.
+
+InfinityFree is okay for capstone demonstration, but Alwaysdata is cleaner for Laravel because of SSH and Composer.
+
+## 5. Render Laravel API, No Bank Details
 
 Use this option if Koyeb asks for bank details.
 
@@ -107,7 +213,7 @@ https://campusfix-api.onrender.com/api
 
 Render Free limitation: the backend may sleep after inactivity, so the first request after a pause can be slow.
 
-## 4. Koyeb Laravel API
+## 6. Koyeb Laravel API
 
 Deploy the `backend/` folder as a Docker service.
 
@@ -156,14 +262,14 @@ Expected:
 {"status":"ok","app":"CampusFix"}
 ```
 
-## 5. GitHub Releases for APK
+## 7. GitHub Releases for APK
 
 The workflow `.github/workflows/release_android_apk.yml` builds `CampusFix.apk` and uploads it to a GitHub Release.
 
 Set this GitHub repository variable:
 
 ```text
-CAMPUSFIX_API_BASE=https://campusfix-api.onrender.com/api
+CAMPUSFIX_API_BASE=https://campusfix.alwaysdata.net/api
 ```
 
 Run the workflow manually, or push a tag:
@@ -185,7 +291,7 @@ APK update metadata URL format:
 https://github.com/<OWNER>/<REPO>/releases/latest/download/campusfix_android_version.json
 ```
 
-## 6. Cloudflare Pages for Flutter PWA
+## 8. Cloudflare Pages for Flutter PWA
 
 Create a Cloudflare Pages project named `campusfix`.
 
@@ -193,7 +299,7 @@ GitHub repository variables:
 
 ```text
 CLOUDFLARE_PROJECT_NAME=campusfix
-CAMPUSFIX_API_BASE=https://campusfix-api.onrender.com/api
+CAMPUSFIX_API_BASE=https://campusfix.alwaysdata.net/api
 CAMPUSFIX_ANDROID_APK_URL=https://github.com/<OWNER>/<REPO>/releases/latest/download/CampusFix.apk
 ```
 
@@ -213,20 +319,30 @@ The workflow `.github/workflows/deploy_cloudflare_pages.yml`:
 5. Removes local APK files so Cloudflare Pages does not reject the deployment.
 6. Deploys `build/web` to Cloudflare Pages.
 
-## 7. Local Cloudflare-style Build
+## 9. Local Cloudflare-style Build
 
 Use this before pushing:
 
 ```powershell
 cd C:\laragon\www\CampusFix
 .\tools\build_cloudflare_web.ps1 `
-  -ApiBase "https://campusfix-api.onrender.com/api" `
+  -ApiBase "https://campusfix.alwaysdata.net/api" `
   -AndroidApkUrl "https://github.com/<OWNER>/<REPO>/releases/latest/download/CampusFix.apk"
 ```
 
 The script builds `build/web` and removes `build/web/downloads`, because Cloudflare Pages has a single-asset size limit and the APK belongs in GitHub Releases.
 
-## 8. Recommended No-card Deployment Order
+## 10. Recommended No-card Deployment Order
+
+1. Create Alwaysdata free account.
+2. Create Cloudinary credentials.
+3. Deploy Laravel backend to Alwaysdata.
+4. Verify `https://campusfix.alwaysdata.net/api/health`.
+5. Run GitHub APK release workflow.
+6. Deploy Flutter PWA to Cloudflare Pages.
+7. Open the Cloudflare Pages URL and test login, registration, report creation, photo upload, admin reports, and APK download.
+
+## 11. Render No-card Deployment Order
 
 1. Create Aiven MySQL.
 2. Create Cloudinary credentials.
@@ -236,7 +352,7 @@ The script builds `build/web` and removes `build/web/downloads`, because Cloudfl
 6. Deploy Flutter PWA to Cloudflare Pages.
 7. Open the Cloudflare Pages URL and test login, registration, report creation, photo upload, admin reports, and APK download.
 
-## 9. Koyeb Deployment Order
+## 12. Koyeb Deployment Order
 
 1. Create Aiven MySQL.
 2. Create Cloudinary credentials.
@@ -246,7 +362,7 @@ The script builds `build/web` and removes `build/web/downloads`, because Cloudfl
 6. Deploy Flutter PWA to Cloudflare Pages.
 7. Open the Cloudflare Pages URL and test login, registration, report creation, photo upload, admin reports, and APK download.
 
-## 10. One-command Assisted Deployment
+## 13. One-command Assisted Deployment
 
 The helper script `tools/connect_free_cloud_stack.ps1` can push the repository, set GitHub Actions variables/secrets, deploy the Laravel backend to Koyeb, trigger the Android APK release workflow, and deploy the Flutter PWA to Cloudflare Pages.
 
