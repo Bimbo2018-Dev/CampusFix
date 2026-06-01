@@ -2,7 +2,8 @@ param(
   [string]$Flutter = "flutter",
   [Parameter(Mandatory = $true)]
   [string]$ApiBase,
-  [string]$AndroidApkUrl = ""
+  [string]$AndroidApkUrl = "",
+  [string]$WindowsAppUrl = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -53,6 +54,10 @@ try {
 
   if (-not [string]::IsNullOrWhiteSpace($AndroidApkUrl)) {
     $buildArgs += "--dart-define=CAMPUSFIX_ANDROID_APK_URL=$AndroidApkUrl"
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($WindowsAppUrl)) {
+    $buildArgs += "--dart-define=CAMPUSFIX_WINDOWS_APP_URL=$WindowsAppUrl"
   }
 
   & $Flutter @buildArgs

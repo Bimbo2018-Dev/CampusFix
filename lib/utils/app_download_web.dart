@@ -3,6 +3,7 @@ import 'dart:js_interop';
 import 'package:web/web.dart' as web;
 
 const _androidApkUrl = String.fromEnvironment('CAMPUSFIX_ANDROID_APK_URL');
+const _windowsAppUrl = String.fromEnvironment('CAMPUSFIX_WINDOWS_APP_URL');
 
 @JS('campusfixInstallApp')
 external JSPromise<JSString> _campusfixInstallApp();
@@ -18,10 +19,18 @@ Future<String> installCampusFixApp() async {
   }
 
   try {
-    return (await _campusfixInstallApp().toDart).toDart;
+    final result = (await _campusfixInstallApp().toDart).toDart;
+    if (result != 'unavailable') return result;
   } catch (_) {
-    return 'unavailable';
+    // Fall through to the Windows package when browser install is unavailable.
   }
+
+  if (_isWindows()) {
+    _downloadWindowsApp();
+    return 'windowsDownload';
+  }
+
+  return 'unavailable';
 }
 
 void _downloadAndroidApk() {
@@ -40,6 +49,19 @@ void _downloadAndroidApk() {
   anchor.remove();
 }
 
+void _downloadWindowsApp() {
+  final href = _windowsAppUrl.isNotEmpty
+      ? _windowsAppUrl
+      : 'https://github.com/Bimbo2018-Dev/CampusFix/releases/latest/download/CampusFix-Windows.zip';
+  final anchor = web.HTMLAnchorElement()
+    ..href = href
+    ..style.display = 'none';
+
+  web.document.body?.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
 bool _isAndroid() {
   return web.window.navigator.userAgent.toLowerCase().contains('android');
 }
@@ -49,4 +71,8 @@ bool _isIos() {
   return userAgent.contains('iphone') ||
       userAgent.contains('ipad') ||
       userAgent.contains('ipod');
+}
+
+bool _isWindows() {
+  return web.window.navigator.userAgent.toLowerCase().contains('windows');
 }

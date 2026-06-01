@@ -28,6 +28,8 @@ class RoleSelectionScreen extends StatelessWidget {
       AppInstallResult.pwaInstall => 'Opening CampusFix app installer...',
       AppInstallResult.androidDownload =>
         'Downloading CampusFix Android APK...',
+      AppInstallResult.windowsDownload =>
+        'Downloading CampusFix Windows app...',
       AppInstallResult.alreadyInstalled =>
         'CampusFix is already installed as an app.',
       AppInstallResult.cancelled => 'CampusFix app install was cancelled.',
@@ -222,7 +224,7 @@ class _DownloadAppPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Desktop opens the app installer. Android downloads the APK.',
+                  'Windows downloads the desktop app. Android downloads the APK.',
                   textAlign: compact ? TextAlign.center : TextAlign.start,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),

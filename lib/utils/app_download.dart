@@ -4,6 +4,7 @@ import 'app_download_stub.dart' if (dart.library.html) 'app_download_web.dart'
 enum AppInstallResult {
   pwaInstall,
   androidDownload,
+  windowsDownload,
   alreadyInstalled,
   cancelled,
   unavailable,
