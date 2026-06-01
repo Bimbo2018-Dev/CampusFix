@@ -26,15 +26,22 @@ jobs:
         run: flutter pub get
 
       - name: Build release APK
+        env:
+          CAMPUSFIX_API_COOKIE: ${{ secrets.CAMPUSFIX_API_COOKIE }}
         run: |
           SIGNATURE="android-$(date +%s%3N)"
           UPDATE_METADATA_URL="https://github.com/${{ github.repository }}/releases/latest/download/campusfix_android_version.json"
+          EXTRA_ARGS=()
+          if [ -n "$CAMPUSFIX_API_COOKIE" ]; then
+            EXTRA_ARGS+=(--dart-define=CAMPUSFIX_API_COOKIE="$CAMPUSFIX_API_COOKIE")
+          fi
           echo "CAMPUSFIX_ANDROID_BUILD_SIGNATURE=$SIGNATURE" >> "$GITHUB_ENV"
           echo "CAMPUSFIX_ANDROID_UPDATE_METADATA_URL=$UPDATE_METADATA_URL" >> "$GITHUB_ENV"
           flutter build apk --release \
             --dart-define=CAMPUSFIX_API_BASE="${{ vars.CAMPUSFIX_API_BASE }}" \
             --dart-define=CAMPUSFIX_ANDROID_BUILD_SIGNATURE="$SIGNATURE" \
-            --dart-define=CAMPUSFIX_ANDROID_UPDATE_METADATA_URL="$UPDATE_METADATA_URL"
+            --dart-define=CAMPUSFIX_ANDROID_UPDATE_METADATA_URL="$UPDATE_METADATA_URL" \
+            "${EXTRA_ARGS[@]}"
           cp build/app/outputs/flutter-apk/app-release.apk CampusFix.apk
 
       - name: Write update metadata

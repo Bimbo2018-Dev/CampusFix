@@ -32,7 +32,7 @@ class RoleSelectionScreen extends StatelessWidget {
         'CampusFix is already installed as an app.',
       AppInstallResult.cancelled => 'CampusFix app install was cancelled.',
       AppInstallResult.unavailable =>
-        'Install prompt is not available yet. Use the browser install icon or open the built PWA version.',
+        'Install is not available in this browser yet. On Chrome or Edge, use the browser install icon or try again after the page finishes loading.',
     };
   }
 
@@ -222,7 +222,7 @@ class _DownloadAppPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'On laptop, install the PWA. On Android, download the APK.',
+                  'Desktop opens the app installer. Android downloads the APK.',
                   textAlign: compact ? TextAlign.center : TextAlign.start,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),

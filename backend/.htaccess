@@ -1,0 +1,26 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    DirectoryIndex public/index.html public/index.php
+    RewriteEngine On
+
+    # InfinityFree uses htdocs as the fixed web root. Keep Laravel internals
+    # private while forwarding API traffic to Laravel and app traffic to Flutter.
+    RewriteRule (^|/)\. - [F,L]
+    RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests|vendor)(/|$) - [F,L,NC]
+    RewriteRule ^(artisan|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml|vite\.config\.js|Dockerfile|README\.md)$ - [F,L,NC]
+
+    RewriteRule ^_campusfix_deploy\.php$ - [END]
+
+    RewriteRule ^api(/.*)?$ public/index.php [L,QSA]
+    RewriteRule ^$ public/index.html [L]
+
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -d
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    RewriteRule ^.*$ public/index.html [L]
+</IfModule>

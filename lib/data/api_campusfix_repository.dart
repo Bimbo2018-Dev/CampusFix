@@ -252,6 +252,10 @@ class ApiCampusFixRepository {
     final request = http.Request(method, Uri.parse('$_baseUrl$path'));
     request.headers['Accept'] = 'application/json';
     request.headers['Content-Type'] = 'application/json';
+    const apiCookie = String.fromEnvironment('CAMPUSFIX_API_COOKIE');
+    if (!kIsWeb && apiCookie.isNotEmpty) {
+      request.headers['Cookie'] = apiCookie;
+    }
     if (authenticated) {
       final token = _token;
       if (token == null) {

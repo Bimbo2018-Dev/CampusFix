@@ -193,10 +193,13 @@ InfinityFree notes:
 - Use PHP 8.3.
 - Import SQL manually through phpMyAdmin or run migrations locally then export SQL.
 - Upload a production-ready Laravel backend with `vendor/` already installed.
-- Point the domain/subdomain document root to Laravel `public`.
-- If document root cannot be changed, copy Laravel `public` contents to the hosting web root and adjust `index.php` paths to point to the Laravel app folder.
+- InfinityFree's web root is `htdocs`, so CampusFix includes a backend root `.htaccess` that forwards requests to Laravel `public/index.php`.
+- Use `tools/package_infinityfree_backend.ps1` to create `build/infinityfree/campusfix-infinityfree-backend.zip`.
+- Use a separate InfinityFree site/subdomain for the Flutter web app, then build it with `tools/build_infinityfree_web.ps1`.
 
 InfinityFree is okay for capstone demonstration, but Alwaysdata is cleaner for Laravel because of SSH and Composer.
+
+Full checklist: `docs/INFINITYFREE.md`.
 
 ## 5. Render Laravel API, No Bank Details
 
@@ -206,7 +209,7 @@ CampusFix includes `render.yaml` in the repo root. Render can create the service
 
 1. Sign in to Render.
 2. Choose **New > Blueprint**.
-3. Connect `https://github.com/Chuan2018-dev/CAMPUSFIX`.
+3. Connect `https://github.com/Bimbo2018-Dev/CampusFix`.
 4. Select the `main` branch.
 5. Render detects `render.yaml`.
 6. Fill the required secret values when prompted.
@@ -318,6 +321,12 @@ Set this GitHub repository variable:
 CAMPUSFIX_API_BASE=https://campusfix.alwaysdata.net/api
 ```
 
+If the APK uses the InfinityFree API, also set this GitHub repository secret:
+
+```text
+CAMPUSFIX_API_COOKIE=<InfinityFree browser challenge cookie>
+```
+
 Run the workflow manually, or push a tag:
 
 ```powershell
@@ -328,13 +337,13 @@ git push origin android-v1.0.0
 APK latest download URL format:
 
 ```text
-https://github.com/<OWNER>/<REPO>/releases/latest/download/CampusFix.apk
+https://github.com/Bimbo2018-Dev/CampusFix/releases/latest/download/CampusFix.apk
 ```
 
 APK update metadata URL format:
 
 ```text
-https://github.com/<OWNER>/<REPO>/releases/latest/download/campusfix_android_version.json
+https://github.com/Bimbo2018-Dev/CampusFix/releases/latest/download/campusfix_android_version.json
 ```
 
 ## 8. Cloudflare Pages for Flutter PWA
@@ -346,7 +355,7 @@ GitHub repository variables:
 ```text
 CLOUDFLARE_PROJECT_NAME=campusfix
 CAMPUSFIX_API_BASE=https://campusfix.alwaysdata.net/api
-CAMPUSFIX_ANDROID_APK_URL=https://github.com/<OWNER>/<REPO>/releases/latest/download/CampusFix.apk
+CAMPUSFIX_ANDROID_APK_URL=https://github.com/Bimbo2018-Dev/CampusFix/releases/latest/download/CampusFix.apk
 ```
 
 GitHub repository secrets:
@@ -373,7 +382,7 @@ Use this before pushing:
 cd C:\laragon\www\CampusFix
 .\tools\build_cloudflare_web.ps1 `
   -ApiBase "https://campusfix.alwaysdata.net/api" `
-  -AndroidApkUrl "https://github.com/<OWNER>/<REPO>/releases/latest/download/CampusFix.apk"
+  -AndroidApkUrl "https://github.com/Bimbo2018-Dev/CampusFix/releases/latest/download/CampusFix.apk"
 ```
 
 The script builds `build/web` and removes `build/web/downloads`, because Cloudflare Pages has a single-asset size limit and the APK belongs in GitHub Releases.

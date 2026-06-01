@@ -1,6 +1,9 @@
 param(
   [string]$Flutter = "flutter",
-  [string]$ApiBase = ""
+  [string]$ApiBase = "",
+  [string]$ApiCookie = "",
+  [string]$DownloadUrl = "",
+  [string]$UpdateMetadataUrl = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,6 +48,14 @@ try {
     $buildArgs += "--dart-define=CAMPUSFIX_API_BASE=$ApiBase"
     Write-Host "Building CampusFix APK with API base $ApiBase"
   }
+  if (-not [string]::IsNullOrWhiteSpace($ApiCookie)) {
+    $buildArgs += "--dart-define=CAMPUSFIX_API_COOKIE=$ApiCookie"
+    Write-Host "Building CampusFix APK with API cookie support"
+  }
+  if (-not [string]::IsNullOrWhiteSpace($UpdateMetadataUrl)) {
+    $buildArgs += "--dart-define=CAMPUSFIX_ANDROID_UPDATE_METADATA_URL=$UpdateMetadataUrl"
+    Write-Host "Building CampusFix APK with update metadata $UpdateMetadataUrl"
+  }
 
   & $Flutter @buildArgs
   New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
@@ -60,7 +71,11 @@ try {
     buildNumber = $buildNumber
     apiBase = $ApiBase
     file = "CampusFix.apk"
-    downloadPath = "/downloads/CampusFix.apk"
+    downloadPath = if ([string]::IsNullOrWhiteSpace($DownloadUrl)) {
+      "/downloads/CampusFix.apk"
+    } else {
+      $DownloadUrl
+    }
     generatedAt = (Get-Date).ToUniversalTime().ToString("o")
     size = $apkItem.Length
     sha256 = (Get-FileHash -LiteralPath $apkTarget -Algorithm SHA256).Hash.ToLowerInvariant()

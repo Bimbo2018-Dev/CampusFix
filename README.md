@@ -115,9 +115,17 @@ Deployment files have been added:
 - `tools/build_cloudflare_web.ps1` for a local Cloudflare-style web build.
 - `tools/start_public_demo_tunnels.ps1` for zero-card public demo links through Cloudflare Tunnel.
 - `tools/connect_free_cloud_stack.ps1` for assisted GitHub, Koyeb, Cloudflare, and APK release deployment.
+- `tools/package_infinityfree_backend.ps1` and `tools/build_infinityfree_web.ps1` for InfinityFree upload packages.
 - `docs/DEPLOYMENT.md` for the full setup checklist and required secrets/variables.
+- `docs/INFINITYFREE.md` for InfinityFree-specific upload steps.
 
 Cloud deployment uses `CAMPUSFIX_API_BASE` for the Koyeb API URL and `CAMPUSFIX_ANDROID_APK_URL` for the GitHub Release APK URL. Cloudinary can be enabled with `CAMPUSFIX_IMAGE_DRIVER=cloudinary`.
+
+CampusFix GitHub Release APK URL:
+
+```text
+https://github.com/Bimbo2018-Dev/CampusFix/releases/latest/download/CampusFix.apk
+```
 
 For a demo presentation without credit-card validation, run:
 
@@ -134,6 +142,12 @@ It prints a temporary public PWA link and API link. Keep the laptop awake while 
 ```
 
 The helper script builds the APK with the current LAN API URL, copies the APK to the web download folder, and writes `campusfix_android_version.json` so installed Android apps can detect newer builds. Android will not silently install APK updates; CampusFix shows an update dialog and opens the APK download for the user to install.
+
+To publish the local APK to GitHub Releases after logging in with the `Bimbo2018-Dev` GitHub account:
+
+```powershell
+.\tools\publish_github_release.ps1
+```
 
 APK output:
 
