@@ -346,6 +346,12 @@ APK update metadata URL format:
 https://github.com/Bimbo2018-Dev/CampusFix/releases/latest/download/campusfix_android_version.json
 ```
 
+Windows desktop ZIP download URL format:
+
+```text
+https://github.com/Bimbo2018-Dev/CampusFix/releases/latest/download/CampusFix-Windows.zip
+```
+
 ## 8. Cloudflare Pages for Flutter PWA
 
 Create a Cloudflare Pages project named `campusfix`.

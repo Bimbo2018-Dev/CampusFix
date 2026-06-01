@@ -1,0 +1,74 @@
+name: Build Windows Desktop Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "GitHub Release tag to attach the Windows app to"
+        required: true
+        default: "android-v1.0.0"
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows app
+        shell: pwsh
+        env:
+          CAMPUSFIX_API_COOKIE: ${{ secrets.CAMPUSFIX_API_COOKIE }}
+        run: |
+          $args = @(
+            "build",
+            "windows",
+            "--release",
+            "--dart-define=CAMPUSFIX_API_BASE=${{ vars.CAMPUSFIX_API_BASE }}"
+          )
+          if (-not [string]::IsNullOrWhiteSpace($env:CAMPUSFIX_API_COOKIE)) {
+            $args += "--dart-define=CAMPUSFIX_API_COOKIE=$env:CAMPUSFIX_API_COOKIE"
+          }
+          flutter @args
+
+      - name: Package Windows app
+        shell: pwsh
+        run: |
+          $releaseDir = "build\windows\x64\runner\Release"
+          Compress-Archive -Path "$releaseDir\*" -DestinationPath "CampusFix-Windows.zip" -Force
+          $zip = Get-Item "CampusFix-Windows.zip"
+          $sha = (Get-FileHash -LiteralPath $zip.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          @"
+          {
+            "app": "CampusFix",
+            "platform": "windows",
+            "file": "CampusFix-Windows.zip",
+            "downloadPath": "https://github.com/${{ github.repository }}/releases/latest/download/CampusFix-Windows.zip",
+            "generatedAt": "$(Get-Date -AsUTC -Format o)",
+            "size": $($zip.Length),
+            "sha256": "$sha"
+          }
+          "@ | Set-Content -Path "campusfix_windows_version.json" -Encoding utf8NoBOM
+
+      - name: Publish GitHub Release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          files: |
+            CampusFix-Windows.zip
+            campusfix_windows_version.json

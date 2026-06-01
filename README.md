@@ -127,6 +127,12 @@ CampusFix GitHub Release APK URL:
 https://github.com/Bimbo2018-Dev/CampusFix/releases/latest/download/CampusFix.apk
 ```
 
+CampusFix GitHub Release Windows desktop ZIP URL:
+
+```text
+https://github.com/Bimbo2018-Dev/CampusFix/releases/latest/download/CampusFix-Windows.zip
+```
+
 For a demo presentation without credit-card validation, run:
 
 ```powershell
