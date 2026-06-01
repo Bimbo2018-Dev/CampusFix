@@ -3,12 +3,16 @@ param(
   [string]$ApiBase = "",
   [string]$ApiCookie = "",
   [string]$DownloadUrl = "",
-  [string]$UpdateMetadataUrl = ""
+  [string]$UpdateMetadataUrl = "",
+  [switch]$SplitPerAbi,
+  [ValidateSet("arm64-v8a", "armeabi-v7a", "x86_64")]
+  [string]$PreferredAbi = "arm64-v8a"
 )
 
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$apkSource = Join-Path $projectRoot "build\app\outputs\flutter-apk\app-release.apk"
+$apkOutputDir = Join-Path $projectRoot "build\app\outputs\flutter-apk"
+$apkSource = Join-Path $apkOutputDir "app-release.apk"
 $downloadDir = Join-Path $projectRoot "web\downloads"
 $apkTarget = Join-Path $downloadDir "CampusFix.apk"
 $metadataTarget = Join-Path $downloadDir "campusfix_android_version.json"
@@ -42,6 +46,9 @@ try {
     "--build-name=$buildName",
     "--build-number=$buildNumber"
   )
+  if ($SplitPerAbi) {
+    $buildArgs += "--split-per-abi"
+  }
   $androidSignature = "android-" + ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
   $buildArgs += "--dart-define=CAMPUSFIX_ANDROID_BUILD_SIGNATURE=$androidSignature"
   if (-not [string]::IsNullOrWhiteSpace($ApiBase)) {
@@ -58,6 +65,19 @@ try {
   }
 
   & $Flutter @buildArgs
+  if ($LASTEXITCODE -ne 0) {
+    throw "flutter build apk failed."
+  }
+
+  if ($SplitPerAbi) {
+    $splitApk = Join-Path $apkOutputDir "app-$PreferredAbi-release.apk"
+    if (-not (Test-Path -LiteralPath $splitApk)) {
+      throw "Could not find split APK: $splitApk"
+    }
+    $apkSource = $splitApk
+    Write-Host "Using smaller $PreferredAbi APK at $apkSource"
+  }
+
   New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
   Copy-Item -LiteralPath $apkSource -Destination $apkTarget -Force
 
