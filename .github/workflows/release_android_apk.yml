@@ -37,12 +37,12 @@ jobs:
           fi
           echo "CAMPUSFIX_ANDROID_BUILD_SIGNATURE=$SIGNATURE" >> "$GITHUB_ENV"
           echo "CAMPUSFIX_ANDROID_UPDATE_METADATA_URL=$UPDATE_METADATA_URL" >> "$GITHUB_ENV"
-          flutter build apk --release \
+          flutter build apk --release --split-per-abi \
             --dart-define=CAMPUSFIX_API_BASE="${{ vars.CAMPUSFIX_API_BASE }}" \
             --dart-define=CAMPUSFIX_ANDROID_BUILD_SIGNATURE="$SIGNATURE" \
             --dart-define=CAMPUSFIX_ANDROID_UPDATE_METADATA_URL="$UPDATE_METADATA_URL" \
             "${EXTRA_ARGS[@]}"
-          cp build/app/outputs/flutter-apk/app-release.apk CampusFix.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk CampusFix.apk
 
       - name: Write update metadata
         run: |
@@ -53,6 +53,7 @@ jobs:
           {
             "app": "CampusFix",
             "platform": "android",
+            "abi": "arm64-v8a",
             "signature": "${CAMPUSFIX_ANDROID_BUILD_SIGNATURE}",
             "version": "1.0.0+1",
             "apiBase": "${{ vars.CAMPUSFIX_API_BASE }}",

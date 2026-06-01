@@ -3,6 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:pointycastle/api.dart';
+import 'package:pointycastle/block/aes.dart';
+import 'package:pointycastle/block/modes/cbc.dart';
 
 import '../models/app_user.dart';
 import '../models/report_model.dart';
@@ -43,6 +46,7 @@ class ApiCampusFixRepository {
   final String _baseUrl;
   final Duration _timeout;
   String? _token;
+  String? _infinityFreeCookie;
 
   String get baseUrl => _baseUrl;
   String? get token => _token;
@@ -249,12 +253,50 @@ class ApiCampusFixRepository {
     bool authenticated = true,
     Duration? timeout,
   }) async {
+    var response = await _sendOnce(
+      method,
+      path,
+      body: body,
+      authenticated: authenticated,
+      timeout: timeout,
+    );
+
+    var responseBody = response.body;
+    final challengeCookie = _infinityFreeCookieFromChallenge(responseBody);
+    if (challengeCookie != null) {
+      _infinityFreeCookie = challengeCookie;
+      response = await _sendOnce(
+        method,
+        path,
+        body: body,
+        authenticated: authenticated,
+        timeout: timeout,
+      );
+      responseBody = response.body;
+    }
+
+    final decoded = _decode(responseBody);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiCampusFixException(_errorMessage(decoded, response.statusCode));
+    }
+
+    return decoded;
+  }
+
+  Future<http.Response> _sendOnce(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+    bool authenticated = true,
+    Duration? timeout,
+  }) async {
     final request = http.Request(method, Uri.parse('$_baseUrl$path'));
     request.headers['Accept'] = 'application/json';
     request.headers['Content-Type'] = 'application/json';
-    const apiCookie = String.fromEnvironment('CAMPUSFIX_API_COOKIE');
-    if (!kIsWeb && apiCookie.isNotEmpty) {
-      request.headers['Cookie'] = apiCookie;
+    final cookie = _apiCookie;
+    if (!kIsWeb && cookie != null) {
+      request.headers['Cookie'] = cookie;
     }
     if (authenticated) {
       final token = _token;
@@ -267,9 +309,9 @@ class ApiCampusFixRepository {
       request.body = jsonEncode(body);
     }
 
-    http.StreamedResponse streamed;
     try {
-      streamed = await _client.send(request).timeout(timeout ?? _timeout);
+      final streamed = await _client.send(request).timeout(timeout ?? _timeout);
+      return http.Response.fromStream(streamed);
     } on TimeoutException {
       throw ApiCampusFixException(
         'Could not reach CampusFix API at $_baseUrl.',
@@ -281,15 +323,6 @@ class ApiCampusFixRepository {
         isConnectionFailure: true,
       );
     }
-
-    final response = await http.Response.fromStream(streamed);
-    final decoded = _decode(response.body);
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiCampusFixException(_errorMessage(decoded, response.statusCode));
-    }
-
-    return decoded;
   }
 
   Map<String, dynamic> _decode(String body) {
@@ -320,6 +353,60 @@ class ApiCampusFixRepository {
     }
 
     return body['message'] as String? ?? 'CampusFix API error ($statusCode).';
+  }
+
+  String? get _apiCookie {
+    if (_infinityFreeCookie != null) {
+      return _infinityFreeCookie;
+    }
+
+    const configured = String.fromEnvironment('CAMPUSFIX_API_COOKIE');
+    return configured.isEmpty ? null : configured;
+  }
+
+  String? _infinityFreeCookieFromChallenge(String body) {
+    if (!body.contains('document.cookie="__test="') ||
+        !body.contains('slowAES.decrypt')) {
+      return null;
+    }
+
+    final match = RegExp(
+      r'var a=toNumbers\("([0-9a-f]+)"\),'
+      r'b=toNumbers\("([0-9a-f]+)"\),'
+      r'c=toNumbers\("([0-9a-f]+)"\)',
+    ).firstMatch(body);
+    if (match == null) {
+      return null;
+    }
+
+    final key = _hexToBytes(match.group(1)!);
+    final iv = _hexToBytes(match.group(2)!);
+    final encrypted = _hexToBytes(match.group(3)!);
+    final cipher = CBCBlockCipher(AESEngine())
+      ..init(false, ParametersWithIV(KeyParameter(key), iv));
+    final decrypted = Uint8List(encrypted.length);
+
+    for (var offset = 0; offset < encrypted.length; offset += cipher.blockSize) {
+      cipher.processBlock(encrypted, offset, decrypted, offset);
+    }
+
+    return '__test=${_bytesToHex(decrypted)}';
+  }
+
+  Uint8List _hexToBytes(String hex) {
+    final bytes = Uint8List(hex.length ~/ 2);
+    for (var i = 0; i < bytes.length; i++) {
+      bytes[i] = int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+    }
+    return bytes;
+  }
+
+  String _bytesToHex(Uint8List bytes) {
+    final buffer = StringBuffer();
+    for (final byte in bytes) {
+      buffer.write(byte.toRadixString(16).padLeft(2, '0'));
+    }
+    return buffer.toString();
   }
 
   static String _defaultBaseUrl() {
